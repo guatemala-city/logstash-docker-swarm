@@ -49,7 +49,7 @@ try {
 
             stage('Checkout upstream branch') {
                 dir('config') {
-                    checkout scm: [$class: 'GitSCM', branches: [[name: upstream_branch_name]], userRemoteConfigs: [[url: 'git@github.com:guatemala-city/logstash-docker-swarm.git']]]
+                    checkout scm: [$class: 'GitSCM', branches: [[name: upstream_branch_name]], userRemoteConfigs: [[url: 'https://github.com/guatemala-city/logstash-docker-swarm.git']]]
                 }
             }
 
@@ -87,7 +87,7 @@ try {
                     sh('#!/bin/sh -e\n' + " jinja2 -D " +
                             " -D SOURCE_FILE_PATH='${source_file}'" +
                             " -D DESTINATION_FILE_PATH='${destination_file}'"+
-                            " config/logstash/pipeline.conf.j2 > build/logstash-docker/pipeline.conf")
+                            " config/logstash/pipeline.conf.j2 > build/pipeline.conf")
                 }
             }
 
