@@ -55,6 +55,7 @@ try {
 
             stage('Set environment') {
                 version = readFile "${env.WORKSPACE}/version.txt"
+                //TODO: switch to stable version
 
 
                 key = upstream_branch_name.split('/').last()
