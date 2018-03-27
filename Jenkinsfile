@@ -95,6 +95,17 @@ try {
             stage('Build') {
                 //TODO: add labels
                 //build and tag
+                sh "docker image build -t ${image_name} -t ${image_name_latest}" +
+                        " --build-arg LS_JAVA_OPTS=-Xmx${ls_heap_size}" +
+                        " --build-arg SRC_IMAGE_VER=${version}" +
+                        " --build-arg BRANCH_NAME='${env.BRANCH_NAME}'" +
+                        " --build-arg COMMIT_ID='${env.COMMIT_ID}' " +
+                        " --build-arg BUILD_ID='${env.BUILD_ID}'  " +
+                        " --build-arg JENKINS_URL='${env.JENKINS_URL}' " +
+                        " --build-arg JOB_NAME='${env.JOB_NAME}' " +
+                        " --build-arg NODE_NAME='${env.NODE_NAME}' " +
+                        " --no-cache --rm " +
+                        "./build/"
             }
 
 
