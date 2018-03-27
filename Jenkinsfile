@@ -110,15 +110,16 @@ try {
 
 
             stage('Test') {
-                try {
-                }finally {
-                    junit 'tests/reports/*.xml'
-                }
+//                try {
+//
+//                }finally {
+//                    junit 'test/reports/*.xml'
+//                }
             }
 
                 stage('Push') {
                     // check if pushing and deploying are allowed
-                    if ((key == "test") || (build_branch == "master")) {
+                    if ((key == "experimental") || (build_branch == "master")) {
                         // if allowed, tag and push
                         def image_latest = docker.image(image_name_latest)
                         image_latest.push()
