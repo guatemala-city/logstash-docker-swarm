@@ -18,6 +18,9 @@ try {
     def pythonHelper
     String ls_heap_size
 
+    def source_file
+    def destination_file
+
     timestamps {
         node('docker-swarm-manager') {
 
@@ -63,11 +66,13 @@ try {
 
                 if (upstream_branch_name.contains('nonprod')) {
                     //TODO: select worker2
-                    //TODO: select source file
+                    source_file      = "/vagrant/nonprod_src.txt"
+                    destination_file = "/vagrant/nonprod_dst.txt"
 
                 } else if (upstream_branch_name.contains('prod')) {
                     //TODO: select worker3
-                    //TODO: select source file
+                    source_file      = "/vagrant/prod_src.txt"
+                    destination_file = "/vagrant/prod_dst.txt"
                 }
             }
 
@@ -78,9 +83,11 @@ try {
             stage('Configure') {
                 pythonHelper.inside("-u root ") {
                     ls_heap_size = "1g"
-                    //TODO Jinja --> fill source files
-                    //TODO Jinja --> configure
-                    //TODO Jinja --> select node
+                    //the parameters are injected into the pipeline.conf
+                    sh('#!/bin/sh -e\n' + " jinja2 -D " +
+                            " -D SOURCE_FILE_PATH='${source_file}'" +
+                            " -D DESTINATION_FILE_PATH='${destination_file}'"+
+                            " config/logstash/pipeline.conf.j2 > build/logstash-docker/pipeline.conf")
                 }
             }
 
@@ -116,10 +123,17 @@ try {
                     // this should occur anyway..
                     sh "docker image rm ${image_name}"
                 }
+
+            stage('Deploy') {
+                //TODO Jinja --> select node
+            }
+
         }//withReg
 
 
-    }//node
+
+
+        }//node
 }//timestamps
 
 } catch (ex) {
