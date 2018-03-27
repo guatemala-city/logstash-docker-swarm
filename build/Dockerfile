@@ -23,6 +23,8 @@ COPY pipeline.conf /usr/share/logstash/pipeline/pipeline.conf
 USER root
 RUN chown --recursive logstash:logstash /usr/share/logstash/config/
 USER logstash
+COPY ./healthcheck.sh /healthcheck.sh
 
+HEALTHCHECK --interval=20s --timeout=10s --retries=3 CMD /healthcheck.sh
 
 CMD ["logstash","-f","/usr/share/logstash/pipeline/pipeline.conf"]
