@@ -84,7 +84,7 @@ try {
                 pythonHelper.inside("-u root ") {
                     ls_heap_size = "1g"
                     //the parameters are injected into the pipeline.conf
-                    sh('#!/bin/sh -e\n' + " jinja2 -D " +
+                    sh('#!/bin/sh -e\n' + " jinja2 " +
                             " -D SOURCE_FILE_PATH='${source_file}'" +
                             " -D DESTINATION_FILE_PATH='${destination_file}'"+
                             " config/logstash/pipeline.conf.j2 > build/pipeline.conf")
