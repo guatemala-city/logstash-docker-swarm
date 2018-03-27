@@ -1,0 +1,21 @@
+input {
+  file {
+    path => "{{ SOURCE_FILE_PATH }}"
+  }
+}
+
+filter {
+    mutate {
+       add_tag => ["${HOSTNAME}"]
+      }
+
+ grok {
+       match => {"message" => "%{GREEDYDATA}"}
+       }
+}
+
+output {
+ file {
+   path => "{{ DESTINATION_FILE_PATH }}"
+ }
+}
