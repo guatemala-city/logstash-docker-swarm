@@ -1,0 +1,21 @@
+version: "3.3"
+
+services:
+  logstash:
+    image: $IMAGE_NAME
+    environment:
+      xpack.monitoring.enabled: FALSE
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1GB
+      restart_policy:
+        condition: any
+        max_attempts: 20
+        window: 30s
+      placement:
+        constraints:
+          - node.label==$WORKER
+          - node.role==worker

@@ -142,16 +142,37 @@ try {
                         throw new hudson.AbortException('deployment stage is not allowed on this branch')
                     }
                 }
-                stage('Cleanup') {
-                    // clean the image from the host which build the image
-                    // this should occur anyway..
-                    sh "docker image rm ${image_name}"
-                }
 
             stage('Deploy') {
-                //TODO: Jinja --> select node
                 //TODO: deploy by version and not by latest
+
+                def is_all_replicas_up
+                def cur_update_time
+
+                String full_image_name = organization + '/' + image_name_latest
+
+                is_service_exist = sh script: "docker service ls --filter name=${service_name} " +
+                                            "--format '{{if .}} exist{{end}}' ",
+                                            returnStdout: true //returns "exist" if the service exists, none otherwise
+
+                if (is_service_exist.contains('exist')) {
+                    // if service exists, set last_update_time
+                    last_update_time = sh script: "docker inspect ${service_name} " +
+                                            "--format='{{.UpdatedAt}}' ", returnStdout: true
+                }
+
+                sh "IMAGE_NAME=${full_image_name} WORKER=${environment} " +
+                        "docker stack deploy --with-registry-auth --compose-file docker-compose.yml ${key}"
+
+
             }
+
+            stage('Cleanup') {
+                // clean the image from the host which build the image
+                // this should occur anyway..
+                sh "docker image rm ${image_name}"
+            }
+
 
         }//withReg
 
