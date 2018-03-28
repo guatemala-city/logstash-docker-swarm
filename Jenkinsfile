@@ -71,12 +71,12 @@ try {
                 build_branch = env.BRANCH_NAME.split('/').last()
 
                 if (upstream_branch_name.contains('nonprod')) {
-                    environment      = "worker3"
+                    environment      = "worker2"
                     source_file      = "/vagrant/nonprod_src.txt"
                     destination_file = "/vagrant/nonprod_dst.txt"
 
                 } else if (upstream_branch_name.contains('prod')) {
-                    environment      = "worker4"
+                    environment      = "worker3"
                     source_file      = "/vagrant/prod_src.txt"
                     destination_file = "/vagrant/prod_dst.txt"
                 }
