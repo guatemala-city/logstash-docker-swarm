@@ -21,10 +21,14 @@ try {
     def source_file
     def destination_file
 
+
+    properties([[$class: 'BuildDiscarderProperty',
+                 strategy: [$class: 'LogRotator', numToKeepStr: '10']]])
+    
     timestamps {
         node('docker-swarm-manager') {
-
             def upstream_branch_name
+
 
 
 
@@ -114,11 +118,15 @@ try {
 
 
             stage('Test') {
-//                try {
-//
-//                }finally {
-//                    junit 'test/reports/*.xml'
-//                }
+                try {
+                    pythonHelper.inside("-u root -v /var/run/docker.sock:/var/run/docker.sock") {
+                        // set env vars for tests and call to testinfra
+                        sh "IMAGE_NAME=${image_name} LS_HEAP_SIZE=${ls_heap_size} testinfra -v test --junit-xml test/reports/custom-image-tests.junit.xml"
+                    }
+
+                }finally {
+                    junit 'test/reports/*.xml'
+                }
             }
 
                 stage('Push') {
