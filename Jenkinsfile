@@ -61,23 +61,24 @@ try {
                 key = upstream_branch_name.split('/').last()
                 service_name = key + "_" + name
 
-                image_name = name + "-" + key + ":" + version
-                image_name_latest = name + "-" + key + ":latest"
+                //TODO: add build number to version in dev (?)
+                image_name        = organization + "/" + name + "-" + key + ":" + version
+                image_name_latest = organization + "/" + name + "-" + key + ":latest"
                 build_branch = env.BRANCH_NAME.split('/').last()
 
                 if (upstream_branch_name.contains('nonprod')) {
-                    //TODO: select worker2
+                    environment      = "worker3"
                     source_file      = "/vagrant/nonprod_src.txt"
                     destination_file = "/vagrant/nonprod_dst.txt"
 
                 } else if (upstream_branch_name.contains('prod')) {
-                    //TODO: select worker3
+                    environment      = "worker4"
                     source_file      = "/vagrant/prod_src.txt"
                     destination_file = "/vagrant/prod_dst.txt"
                 }
             }
 
-        docker.withRegistry("https://${env.DOCKER_REGISTRY_HOST}", env.DOCKER_REGISTRY_CREDENTIALS_ID) {
+        docker.withRegistry("https://${docker_registry_host}", docker_registry_credentials_id) {
             //TODO: sh "docker login -u ${USERNAME} -p ${PASSWORD}"
             pythonHelper = docker.image('guatemalacityex/python-helper:1.0-logstash')
 
@@ -97,8 +98,10 @@ try {
                 //TODO: add labels
                 //build and tag
                 sh "docker image build -t ${image_name} -t ${image_name_latest}" +
+
                         " --build-arg LS_JAVA_OPTS=-Xmx${ls_heap_size}" +
                         " --build-arg SRC_IMAGE_VER=${version}" +
+
                         " --build-arg BRANCH_NAME='${env.BRANCH_NAME}'" +
                         " --build-arg COMMIT_ID='${env.COMMIT_ID}' " +
                         " --build-arg BUILD_ID='${env.BUILD_ID}'  " +
@@ -138,7 +141,8 @@ try {
                 }
 
             stage('Deploy') {
-                //TODO Jinja --> select node
+                //TODO: Jinja --> select node
+                //TODO: deploy by version and not by latest
             }
 
         }//withReg
