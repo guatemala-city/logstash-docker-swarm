@@ -4,7 +4,7 @@ services:
   logstash:
     image: $IMAGE_NAME
     environment:
-      xpack.monitoring.enabled: FALSE
+      xpack.monitoring.enabled: "FALSE"
     deploy:
       mode: global
       resources:
