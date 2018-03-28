@@ -19,12 +19,16 @@ LABEL branch.name="${BRANCH_NAME}"
 LABEL commit.id="${COMMIT_ID}"
 LABEL build.id="${BUILD_ID}"
 
-COPY pipeline.conf /usr/share/logstash/pipeline/pipeline.conf
 USER root
-RUN chown --recursive logstash:logstash /usr/share/logstash/config/
-USER logstash
-COPY ./healthcheck.sh /healthcheck.sh
 
-HEALTHCHECK --interval=20s --timeout=10s --retries=3 CMD /healthcheck.sh
+COPY pipeline.conf /usr/share/logstash/pipeline/pipeline.conf
+RUN chown --recursive logstash:logstash /usr/share/logstash/config/
+
+COPY ./healthcheck.sh /healthcheck.sh
+RUN chmod +x /healthcheck.sh
+
+USER logstash
+
+HEALTHCHECK --interval=20s --timeout=10s --retries=6 CMD /healthcheck.sh
 
 CMD ["logstash","-f","/usr/share/logstash/pipeline/pipeline.conf"]

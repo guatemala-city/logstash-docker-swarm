@@ -149,7 +149,6 @@ try {
                 def is_all_replicas_up
                 def cur_update_time
 
-                String full_image_name = organization + '/' + image_name_latest
 
                 is_service_exist = sh script: "docker service ls --filter name=${service_name} " +
                                             "--format '{{if .}} exist{{end}}' ",
@@ -161,7 +160,7 @@ try {
                                             "--format='{{.UpdatedAt}}' ", returnStdout: true
                 }
 
-                sh "IMAGE_NAME=${full_image_name} WORKER=${environment} " +
+                sh "IMAGE_NAME=${image_name_latest} WORKER=${environment} " +
                         "docker stack deploy --with-registry-auth --compose-file docker-compose.yml ${key}"
 
 
