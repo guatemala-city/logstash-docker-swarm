@@ -3,34 +3,30 @@
 try {
     def docker_registry_host = env.DOCKER_REGISTRY_HOST ?: 'index.docker.io/v2/'
     def docker_registry_credentials_id = env.DOCKER_REGISTRY_CREDENTIALS_ID?: 'dockerhub_cred'
-    def organization = 'guatemalacityex'
+    def repository = 'guatemalacityex'
     def name = 'logstash'
-    def uniqueWorkspace = "build-" +env.BUILD_ID
     def version
 
-    def image_name_latest
-    def environment
+    def imageName
+    def imageNameLatest
+    def environmentId
     def key
-    def service_name
-    def build_branch
-    def last_update_time = ""
-    def is_service_exist
+    def serviceName
+    def lastUpdateTime = ""
+    def serviceExists
     def pythonHelper
-    String ls_heap_size
+
+    String ls_heap_size = "1g"
 
     def source_file
     def destination_file
 
-
     properties([[$class: 'BuildDiscarderProperty',
                  strategy: [$class: 'LogRotator', numToKeepStr: '10']]])
-    
+
     timestamps {
         node('docker-swarm-manager') {
             def upstream_branch_name
-
-
-
 
             stage('Checkout') {
 
@@ -58,126 +54,121 @@ try {
             }
 
             stage('Set environment') {
-                version = readFile "${env.WORKSPACE}/version.txt"
-                //TODO: switch to stable version
+                version      = readFile "${env.WORKSPACE}/version.txt"
+                key          = upstream_branch_name.split('/').last()
+                serviceName  = key + "_" + name
 
-
-                key = upstream_branch_name.split('/').last()
-                service_name = key + "_" + name
-
-                //TODO: add build number to version in dev (?)
-                image_name        = organization + "/" + name + "-" + key + ":" + version
-                image_name_latest = organization + "/" + name + "-" + key + ":latest"
-                build_branch = env.BRANCH_NAME.split('/').last()
+                imageName        = repository + "/" + name + "-" + key + ":" + version
+                imageNameLatest  = repository + "/" + name + "-" + key + ":latest"
 
                 if (upstream_branch_name.contains('nonprod')) {
-                    environment      = "worker2"
+                    environmentId    = "2"
                     source_file      = "/vagrant/nonprod_src.txt"
                     destination_file = "/vagrant/nonprod_dst.txt"
 
                 } else if (upstream_branch_name.contains('prod')) {
-                    environment      = "worker3"
+                    environmentId    = "3"
                     source_file      = "/vagrant/prod_src.txt"
                     destination_file = "/vagrant/prod_dst.txt"
                 }
             }
 
-        docker.withRegistry("https://${docker_registry_host}", docker_registry_credentials_id) {
-            //TODO: sh "docker login -u ${USERNAME} -p ${PASSWORD}"
-            pythonHelper = docker.image('guatemalacityex/python-helper:1.0-logstash')
+            docker.withRegistry("https://${docker_registry_host}", docker_registry_credentials_id) {
+                //TODO: sh "docker login -u ${USERNAME} -p ${PASSWORD}"
+                pythonHelper = docker.image("${repository}/python-helper:1.0-logstash")
 
-            stage('Configure') {
-                pythonHelper.inside("-u root ") {
-                    ls_heap_size = "1g"
-                    //the parameters are injected into the pipeline.conf
-                    sh('#!/bin/sh -e\n' + " jinja2 " +
-                            " -D SOURCE_FILE_PATH='${source_file}'" +
-                            " -D DESTINATION_FILE_PATH='${destination_file}'"+
-                            " config/logstash/pipeline.conf.j2 > build/pipeline.conf")
-                }
-            }
-
-
-            stage('Build') {
-                //TODO: add labels
-                //build and tag
-                sh "docker image build -t ${image_name} -t ${image_name_latest}" +
-
-                        " --build-arg LS_JAVA_OPTS=-Xmx${ls_heap_size}" +
-                        " --build-arg SRC_IMAGE_VER=${version}" +
-
-                        " --build-arg BRANCH_NAME='${env.BRANCH_NAME}'" +
-                        " --build-arg COMMIT_ID='${env.COMMIT_ID}' " +
-                        " --build-arg BUILD_ID='${env.BUILD_ID}'  " +
-                        " --build-arg JENKINS_URL='${env.JENKINS_URL}' " +
-                        " --build-arg JOB_NAME='${env.JOB_NAME}' " +
-                        " --build-arg NODE_NAME='${env.NODE_NAME}' " +
-                        " --no-cache --rm " +
-                        "./build/"
-            }
-
-
-            stage('Test') {
-                try {
-                    pythonHelper.inside("-u root -v /var/run/docker.sock:/var/run/docker.sock") {
-                        // set env vars for tests and call to testinfra
-                        sh "IMAGE_NAME=${image_name} LS_HEAP_SIZE=${ls_heap_size} testinfra -v test --junit-xml test/reports/custom-image-tests.junit.xml"
+                stage('Configure') {
+                    pythonHelper.inside("-u root ") {
+                        //the parameters are injected into the pipeline.conf
+                        sh('#!/bin/sh -e\n' + " jinja2 " +
+                                " -D SOURCE_FILE_PATH='${source_file}'" +
+                                " -D DESTINATION_FILE_PATH='${destination_file}'"+
+                                " config/logstash/pipeline.conf.j2 > build/pipeline.conf")
                     }
-
-                }finally {
-                    junit 'test/reports/*.xml'
                 }
-            }
+
+
+                stage('Build') {
+                    //TODO: add labels
+                    //build and tag
+                    sh "docker image build -t ${imageName} -t ${imageNameLatest}" +
+
+                            " --build-arg LS_JAVA_OPTS=-Xmx${ls_heap_size}" +
+                            " --build-arg SRC_IMAGE_VER=${version}" +
+
+                            " --build-arg BRANCH_NAME='${env.BRANCH_NAME}'" +
+                            " --build-arg COMMIT_ID='${env.COMMIT_ID}' " +
+                            " --build-arg BUILD_ID='${env.BUILD_ID}'  " +
+                            " --build-arg JENKINS_URL='${env.JENKINS_URL}' " +
+                            " --build-arg JOB_NAME='${env.JOB_NAME}' " +
+                            " --build-arg NODE_NAME='${env.NODE_NAME}' " +
+                            " --no-cache --rm " +
+                            "./build/"
+                }
+
+                stage('Test') {
+                    try {
+                        pythonHelper.inside("-u root -v /var/run/docker.sock:/var/run/docker.sock") {
+                            sh "IMAGE_NAME=${imageName} LS_HEAP_SIZE=${ls_heap_size} " +
+                                    "testinfra -v test --junit-xml test/reports/custom-image-tests.junit.xml"
+                        }
+                    }finally {
+                        junit 'test/reports/*.xml'
+                    }
+                }
 
                 stage('Push') {
                     // check if pushing and deploying are allowed
-                    if ((key == "experimental") || (build_branch == "master")) {
+                    if ((key == "experimental") || (env.BRANCH_NAME == "master")) {
                         // if allowed, tag and push
-                        def image_latest = docker.image(image_name_latest)
+                        def image_latest = docker.image(imageNameLatest)
                         image_latest.push()
-                        def image = docker.image(image_name)
+                        def image = docker.image(imageName)
                         image.push()
                     } else {
                         currentBuild.rawBuild.result = Result.ABORTED
-                        throw new hudson.AbortException('deployment stage is not allowed on this branch')
+                        throw new hudson.AbortException('Deployment and propagation are not allowed on this branch')
                     }
                 }
 
-            stage('Deploy') {
-                //TODO: deploy by version and not by latest
+                stage('Deploy') {
+                    def is_all_replicas_up
+                    def cur_update_time
 
-                def is_all_replicas_up
-                def cur_update_time
+                    serviceExists = sh script: "docker service ls --filter name=${serviceName} " +
+                                                "--format '{{if .}} exist{{end}}' ",
+                                                returnStdout: true //returns "exist" if the service exists, none otherwise
 
+                    if (serviceExists.contains('exist')) {
+                        // if service exists, get last_update_time
+                        lastUpdateTime = sh script: "docker inspect ${serviceName} " +
+                                                "--format='{{.UpdatedAt}}' ", returnStdout: true
+                    }
 
-                is_service_exist = sh script: "docker service ls --filter name=${service_name} " +
-                                            "--format '{{if .}} exist{{end}}' ",
-                                            returnStdout: true //returns "exist" if the service exists, none otherwise
+                    sh "IMAGE_NAME=${imageNameLatest} WORKER=${environmentId} " +
+                            "docker stack deploy --with-registry-auth --compose-file docker-compose.yml ${key}"
 
-                if (is_service_exist.contains('exist')) {
-                    // if service exists, set last_update_time
-                    last_update_time = sh script: "docker inspect ${service_name} " +
-                                            "--format='{{.UpdatedAt}}' ", returnStdout: true
+                    timeout(5) {
+                        waitUntil {
+                            is_all_replicas_up = sh script: "docker service ls " +
+                                    "--filter name=${service_name} " +
+                                    "--format '{{if (eq (index .Replicas 0) (index .Replicas 2))}} ok {{else}} error {{end}}'",
+                                    returnStdout: true
+
+                            cur_update_time = sh script: "docker inspect ${service_name} " +
+                                    "--format='{{.UpdatedAt}}' ", returnStdout: true
+
+                            return((cur_update_time != last_update_time) && (is_all_replicas_up.contains('ok')))
+                        }
+                    }
                 }
 
-                sh "IMAGE_NAME=${image_name_latest} WORKER=${environment} " +
-                        "docker stack deploy --with-registry-auth --compose-file docker-compose.yml ${key}"
+                stage('Cleanup') {
+                    sh "docker image rm ${imageName}"
+                    sh "docker image rm ${imageNameLatest}"
+                }
 
-
-            }
-
-            stage('Cleanup') {
-                // clean the image from the host which build the image
-                // this should occur anyway..
-                sh "docker image rm ${image_name}"
-            }
-
-
-        }//withReg
-
-
-
-
+            }//withReg
         }//node
 }//timestamps
 
