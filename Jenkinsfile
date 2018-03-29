@@ -62,12 +62,12 @@ try {
                 imageNameLatest  = repository + "/" + name + "-" + key + ":latest"
 
                 if (upstream_branch_name.contains('nonprod')) {
-                    environmentId    = "2"
+                    environmentId    = "worker2"
                     source_file      = "/vagrant/nonprod_src.txt"
                     destination_file = "/vagrant/nonprod_dst.txt"
 
                 } else if (upstream_branch_name.contains('prod')) {
-                    environmentId    = "3"
+                    environmentId    = "worker3"
                     source_file      = "/vagrant/prod_src.txt"
                     destination_file = "/vagrant/prod_dst.txt"
                 }
@@ -132,8 +132,8 @@ try {
                 }
 
                 stage('Deploy') {
-                    def is_all_replicas_up
-                    def cur_update_time
+                    def areAllReplicasUp
+                    def updateTime
 
                     serviceExists = sh script: "docker service ls --filter name=${serviceName} " +
                                                 "--format '{{if .}} exist{{end}}' ",
@@ -150,15 +150,15 @@ try {
 
                     timeout(5) {
                         waitUntil {
-                            is_all_replicas_up = sh script: "docker service ls " +
-                                    "--filter name=${service_name} " +
+                            areAllReplicasUp = sh script: "docker service ls " +
+                                    "--filter name=${serviceName} " +
                                     "--format '{{if (eq (index .Replicas 0) (index .Replicas 2))}} ok {{else}} error {{end}}'",
                                     returnStdout: true
 
-                            cur_update_time = sh script: "docker inspect ${service_name} " +
+                            updateTime = sh script: "docker inspect ${serviceName} " +
                                     "--format='{{.UpdatedAt}}' ", returnStdout: true
 
-                            return((cur_update_time != last_update_time) && (is_all_replicas_up.contains('ok')))
+                            return((updateTime != lastUpdateTime) && (areAllReplicasUp.contains('ok')))
                         }
                     }
                 }
